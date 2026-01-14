@@ -1,21 +1,61 @@
 import streamlit as st
 import google.generativeai as genai
 
-# 1. CONFIGURACIÓN DE PÁGINA
-st.set_page_config(page_title="Asesor CATEM", page_icon="⚖️")
+# 1. CONFIGURACIÓN VISUAL DE LA PÁGINA
+st.set_page_config(
+    page_title="Asesor CATEM",
+    page_icon="⚖️",
+    layout="centered", # Centra el contenido para que parezca más una app
+    initial_sidebar_state="expanded"
+)
 
-st.title("⚖️ Asesor Digital CATEM")
-st.write("Bienvenido compañero. Soy tu asistente virtual para orientación laboral.")
+# 2. ESTILOS CSS PERSONALIZADOS (MAQUILLAJE)
+st.markdown("""
+    <style>
+    /* Cambiar color del título principal a Rojo CATEM (aproximado) */
+    h1 {
+        color: #B71C1C; 
+        text-align: center;
+    }
+    /* Estilo para los mensajes del chat */
+    .stChatMessage {
+        border-radius: 15px;
+        padding: 10px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# 2. CONEXIÓN SEGURA (Aquí usará la clave que guardaste, sin mostrarla)
+# 3. BARRA LATERAL (MENÚ)
+with st.sidebar:
+    # Aquí puedes poner el logo si tienes la URL de la imagen
+    # st.image("https://tu-url-del-logo-catem.png", width=200) 
+    
+    st.header("🔧 Herramientas")
+    
+    # Botón para borrar memoria
+    if st.button("🗑️ Nueva Consulta", type="primary"):
+        st.session_state.messages = []
+        st.rerun()
+        
+    st.divider()
+    
+    st.info("ℹ️ **Sobre esta IA:**\nEntrenada para orientación laboral básica basada en la LFT.")
+    
+    st.warning("⚠️ **AVISO LEGAL:**\nEsta herramienta es informativa. No sustituye a un abogado real.")
+    
+    st.link_button("🌐 Ir al sitio oficial CATEM", "https://catem.org.mx/")
+
+# 4. CONEXIÓN SEGURA
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
 except:
-    st.error("Falta la clave de API. Configúrala en los 'Secrets' de Streamlit.")
+    st.error("⚠️ Error: No se encontró la API Key en los Secrets.")
 
-# 3. EL CEREBRO (Instrucciones)
+# 5. EL CEREBRO (Instrucciones)
+# IMPORTANTE: ¡Asegúrate de que aquí abajo siga tu texto de ROL y CONTEXTO que ya tenías!
 sys_instruct = """
+Eres el Asesor Digital CATEM.
 ROL:
 Eres el "Asesor Digital CATEM", una IA diseñada para la Confederación Autónoma de Trabajadores y Empleados de México. Tu misión es brindar orientación jurídica inicial, empática y eficiente a los trabajadores mexicanos.
 
@@ -44,26 +84,35 @@ FORMATO DE RESPUESTA:
 
 model = genai.GenerativeModel('gemini-1.5-pro', system_instruction=sys_instruct)
 
-# 4. CHAT (Memoria)
+# 6. INTERFAZ PRINCIPAL
+st.title("⚖️ Asesor Digital CATEM")
+st.markdown("### *Tu aliado en la defensa de tus derechos laborales*")
+st.markdown("---") # Línea divisoria elegante
+
+# Memoria del chat
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Mensaje de bienvenida inicial si está vacío
+if len(st.session_state.messages) == 0:
+    st.chat_message("assistant").markdown("¡Hola compañero! 👋 Soy tu asesor virtual. ¿En qué situación laboral te encuentras hoy? (Ej. Despido, Dudas de Salario, Acoso...)")
+
+# Mostrar historial
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 5. INTERACCIÓN
-if prompt := st.chat_input("Escribe tu duda aquí..."):
-    # Guardar y mostrar mensaje del usuario
+# Input del usuario
+if prompt := st.chat_input("Escribe tu consulta aquí..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Generar respuesta
     with st.chat_message("assistant"):
-        try:
-            response = model.generate_content(prompt)
-            st.markdown(response.text)
-            st.session_state.messages.append({"role": "model", "content": response.text})
-        except Exception as e:
-            st.error(f"Ocurrió un error: {e}")
+        with st.spinner("Analizando tu caso con la Ley Federal del Trabajo..."):
+            try:
+                response = model.generate_content(prompt)
+                st.markdown(response.text)
+                st.session_state.messages.append({"role": "model", "content": response.text})
+            except Exception as e:
+                st.error(f"Lo siento, hubo un error de conexión: {e}")
